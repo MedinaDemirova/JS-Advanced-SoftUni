@@ -1,113 +1,60 @@
 function attachEvents() {
-    let catchesDIV = document.getElementById('catches');
-    let loadBtn = document.getElementsByClassName('load')[0];
-    let addBtn = document.getElementsByClassName('add')[0];
-
-    loadBtn.addEventListener('click', () => {
-        catchesDIV.innerHTML = '';
-        fetch(`https://fisher-game.firebaseio.com/catches.json`)
+    let basicURL = `https://judgetests.firebaseio.com/locations.json`;
+    let getBtn = document.getElementById('submit');
+    let locationInput = document.getElementById('location');
+    let obj;
+    let conditions = {
+        "Sunny": `&#x2600`,
+        "Partly sunny": `&#x26C5`,
+        "Overcast": `&#x2601`,
+        "Rain": `&#x2614`,
+        "Degrees": `&#176`
+    }
+    let divCurrent = document.getElementById('current');
+    let divForecast = document.getElementById('forecast');
+    let divupcoming = document.getElementById('upcoming');
+    getBtn.addEventListener('click', () => {
+        fetch(`${basicURL}`)
             .then(res => res.json())
             .then(data => {
-                let kvpsArr = Object.entries(data);
-                for (const element of kvpsArr) {
-                    let newDiv = document.createElement('div');
-                    newDiv.className = "catch";
-                    newDiv.id = `${element[0]}`;
-                    newDiv.innerHTML = ` <label>Angler</label>
-                    <input type="text" class="angler" value="${element[1].angler}" />
-                    <hr>
-                    <label>Weight</label>      
-                    <input type="number" class="weight" value="${element[1].weight}" />
-                    <hr>
-                    <label>Species</label>
-                    <input type="text" class="species" value="${element[1].species}" />
-                    <hr>
-                    <label>Location</label>
-                    <input type="text" class="location" value="${element[1].location}" />
-                    <hr>
-                    <label>Bait</label>
-                    <input type="text" class="bait" value="${element[1].bait}" />
-                    <hr>
-                    <label>Capture Time</label>
-                    <input type="number" class="captureTime" value="${element[1].captureTime}" />
-                    <hr>`;
+                let current = data.find(x => x.name == locationInput.value);
+                if (current !== undefined) {
+                    obj = current.code;
+                    let promiseOne = fetch(`https://judgetests.firebaseio.com/forecast/today/${obj}.json`)
+                        .then(res => res.json());
+                    let promiseTwo = fetch(`https://judgetests.firebaseio.com/forecast/upcoming/${obj}.json`)
+                        .then(res => res.json())
 
-                    let updateBtn = document.createElement('button');
-                    updateBtn.className = "update";
-                    updateBtn.innerHTML = `Update`;
-                    let deleteBtn = document.createElement('button');
-                    deleteBtn.className = "delete";
-                    deleteBtn.innerHTML = 'Delete';
-                    updateBtn.addEventListener('click', update);
-                    deleteBtn.addEventListener('click', deleteFunct);
-
-                    newDiv.appendChild(updateBtn);
-                    newDiv.appendChild(deleteBtn);
-                    catchesDIV.appendChild(newDiv);
-                };
+                    Promise.all([promiseOne, promiseTwo])
+                        .then(([dataOne, data]) => {
+                            divForecast.style = "display: block";
+                            let newDivForecast = document.createElement('div');
+                            newDivForecast.classList = 'forecast';
+                            newDivForecast.innerHTML = `<span class= "condition symbol">${conditions[dataOne.forecast.condition]}</span>
+                <span class = "condition">         
+                <span class = "forecast-data">${dataOne.name}</span>
+                <span class = "forecast-data">${dataOne.forecast.low}°/${dataOne.forecast.high}°</span>
+                <span class = "forecast-data">${dataOne.forecast.condition}</span></span>`
+                            divCurrent.appendChild(newDivForecast);
+                            let newDivUpcoming = document.createElement('div');
+                            newDivUpcoming.classList = "forecast-info";
+                            newDivUpcoming.innerHTML = `<span class = "upcoming">
+                <span class = "symbol">${conditions[data.forecast[0].condition]}</span>
+                <span class = "forecast-data">${data.forecast[0].low}°/${data.forecast[0].high}°</span>
+                <span class = "forecast-data">${data.forecast[0].condition}</span>
+                <span class = "symbol">${conditions[data.forecast[1].condition]}</span>
+                <span class = "forecast-data">${data.forecast[1].low}°/${data.forecast[1].high}°</span>
+                <span class = "forecast-data">${data.forecast[1].condition}</span>
+                <span class = "symbol">${conditions[data.forecast[2].condition]}</span>
+                <span class = "forecast-data">${data.forecast[2].low}°/${data.forecast[2].high}°</span>
+                <span class = "forecast-data">${data.forecast[2].condition}</span></span>`
+                            divupcoming.appendChild(newDivUpcoming);
+                        })
+                } else {
+                    divForecast.style = "display: block";
+                    divCurrent.innerHTML = 'Error';
+                }
             })
-    });
-
-    addBtn.addEventListener('click', () => {
-        let addForm = document.getElementById('addForm');
-        let angler = addForm.getElementsByTagName('input')[0].value;
-        let weight = addForm.getElementsByTagName('input')[1].value;
-        let species = addForm.getElementsByTagName('input')[2].value;
-        let location = addForm.getElementsByTagName('input')[3].value;
-        let bait = addForm.getElementsByTagName('input')[4].value;
-        let captureTime = addForm.getElementsByTagName('input')[5].value;
-        fetch(`https://fisher-game.firebaseio.com/catches.json`, {
-            method: 'POST',
-            body: JSON.stringify({
-                angler: angler,
-                weight: weight,
-                species: species,
-                location: location,
-                bait: bait,
-                captureTime: captureTime
-            })
-        })
-        addForm.getElementsByTagName('input')[0].value = '';
-        addForm.getElementsByTagName('input')[1].value = '';
-        addForm.getElementsByTagName('input')[2].value = '';
-        addForm.getElementsByTagName('input')[3].value = '';
-        addForm.getElementsByTagName('input')[4].value = '';
-        addForm.getElementsByTagName('input')[5].value = '';
-
-
-    });
-
-    function update(e) {
-        let btnParentDivUpdate = e.target.parentElement;
-        let anglerCatches = btnParentDivUpdate.getElementsByTagName('input')[0].value;
-        let weightCatches = btnParentDivUpdate.getElementsByTagName('input')[1].value;
-        let speciesCatches = btnParentDivUpdate.getElementsByTagName('input')[2].value;
-        let locationCatches = btnParentDivUpdate.getElementsByTagName('input')[3].value;
-        let baitCatches = btnParentDivUpdate.getElementsByTagName('input')[4].value;
-        let captureTimeCatches = btnParentDivUpdate.getElementsByTagName('input')[5].value;
-        fetch(`https://fisher-game.firebaseio.com/catches/${btnParentDivUpdate.id}.json`, {
-            method: 'PUT',
-            body: JSON.stringify({
-                angler: anglerCatches,
-                weight: weightCatches,
-                species: speciesCatches,
-                location: locationCatches,
-                bait: baitCatches,
-                captureTime: captureTimeCatches
-            })
-        });
-        var event = document.createEvent('Event');
-        event.initEvent('build', true, true);
-        loadBtn.dispatchEvent(event); 
-    }
-
-    function deleteFunct(e) {
-        let btnParentDiv = e.target.parentElement;
-        fetch(`https://fisher-game.firebaseio.com/catches/${btnParentDiv.id}.json`, {
-            method: 'DELETE'
-        });
-    }
-
+    })
 }
-
 attachEvents();
