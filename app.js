@@ -1,60 +1,84 @@
-function attachEvents() {
-    let basicURL = `https://judgetests.firebaseio.com/locations.json`;
-    let getBtn = document.getElementById('submit');
-    let locationInput = document.getElementById('location');
-    let obj;
-    let conditions = {
-        "Sunny": `&#x2600`,
-        "Partly sunny": `&#x26C5`,
-        "Overcast": `&#x2601`,
-        "Rain": `&#x2614`,
-        "Degrees": `&#176`
-    }
-    let divCurrent = document.getElementById('current');
-    let divForecast = document.getElementById('forecast');
-    let divupcoming = document.getElementById('upcoming');
-    getBtn.addEventListener('click', () => {
-        fetch(`${basicURL}`)
+let newStudentForm = document.createElement('div');
+let body = document.getElementsByTagName('body')[0];
+newStudentForm.innerHTML = `<form>
+<h3 style="color:##0000A0">Create new student</h3>
+<label for="id"style="color:##0000A0">ID:</label>
+<input type="text" id="id" name="id">
+<label for="fname" style="color:##0000A0">First name:</label>
+<input type="text" id="fname" name="fname">
+<label for="lname" style="color:##0000A0">Last name:</label>
+<input type="text" id="lname" name="lname">
+<label for="faculcityNumber" style="color:##0000A0">Faculty No:</label>
+<input type="text" id="faculcityNumber" name="faculcityNumber">
+<label for="garede" style="color:##0000A0">Grade:</label>
+<input type="text" id="garede" name="garede">
+</form>`;
+let createButton = document.createElement('button');
+createButton.innerHTML = 'Create';
+createButton.style = 'color:#0000A0';
+createButton.addEventListener('click', create);
+newStudentForm.appendChild(createButton);
+body.appendChild(newStudentForm);
+let resultsTable = document.getElementById('results');
+let tableBodyElement = resultsTable.getElementsByTagName('tbody')[0];
+load();
+
+function load() {
+
+    fetch(`https://students-e118a.firebaseio.com/students.json`)
+        .then(res => res.json())
+        .then(data => {
+            let kvpS = Object.entries(data).sort();
+            kvpS.sort((a, b) => a[1].ID - b[1].ID);
+
+            for (const kvp of kvpS) {
+                let newRow = document.createElement('tr');
+                newRow.setAttribute('data-id', `${kvp[0]}`);
+                newRow.innerHTML = `
+            <td>${kvp[1].ID}</td>
+            <td>${kvp[1].FirstName}</td>
+            <td>${kvp[1].LastName}</td>
+            <td>${kvp[1].FacultyNumber}</td>
+            <td>${kvp[1].Grade}</td>`
+                tableBodyElement.appendChild(newRow);
+            }
+        })
+}
+
+function create(e) {
+    e.preventDefault();
+    let currentForm = e.target.parentElement;
+    let id = currentForm.getElementsByTagName('input')[0];
+    let firstName = currentForm.getElementsByTagName('input')[1];
+    let lastName = currentForm.getElementsByTagName('input')[2];
+    let facNum = currentForm.getElementsByTagName('input')[3];
+    let grade = currentForm.getElementsByTagName('input')[4];
+
+
+    if (id.value.match(/[0-9]+/) && firstName.value.match(/[A-Z][a-z]+/) && lastName.value.match(/[A-Z][a-z]+/) &&
+        facNum.value.match(/[0-9]+/) && grade.value.match(/[0-9]+/)) {
+
+        fetch(`https://students-e118a.firebaseio.com/students.json`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    ID: id.value,
+                    FirstName: firstName.value,
+                    LastName: lastName.value,
+                    FacultyNumber: facNum.value,
+                    Grade: grade.value
+                })
+            })
             .then(res => res.json())
             .then(data => {
-                let current = data.find(x => x.name == locationInput.value);
-                if (current !== undefined) {
-                    obj = current.code;
-                    let promiseOne = fetch(`https://judgetests.firebaseio.com/forecast/today/${obj}.json`)
-                        .then(res => res.json());
-                    let promiseTwo = fetch(`https://judgetests.firebaseio.com/forecast/upcoming/${obj}.json`)
-                        .then(res => res.json())
+                tableBodyElement.innerHTML = '';
+                load();
+                id.value = '';
+                firstName.value = '';
+                lastName.value = '';
+                facNum.value = '';
+                grade.value = '';
 
-                    Promise.all([promiseOne, promiseTwo])
-                        .then(([dataOne, data]) => {
-                            divForecast.style = "display: block";
-                            let newDivForecast = document.createElement('div');
-                            newDivForecast.classList = 'forecast';
-                            newDivForecast.innerHTML = `<span class= "condition symbol">${conditions[dataOne.forecast.condition]}</span>
-                <span class = "condition">         
-                <span class = "forecast-data">${dataOne.name}</span>
-                <span class = "forecast-data">${dataOne.forecast.low}°/${dataOne.forecast.high}°</span>
-                <span class = "forecast-data">${dataOne.forecast.condition}</span></span>`
-                            divCurrent.appendChild(newDivForecast);
-                            let newDivUpcoming = document.createElement('div');
-                            newDivUpcoming.classList = "forecast-info";
-                            newDivUpcoming.innerHTML = `<span class = "upcoming">
-                <span class = "symbol">${conditions[data.forecast[0].condition]}</span>
-                <span class = "forecast-data">${data.forecast[0].low}°/${data.forecast[0].high}°</span>
-                <span class = "forecast-data">${data.forecast[0].condition}</span>
-                <span class = "symbol">${conditions[data.forecast[1].condition]}</span>
-                <span class = "forecast-data">${data.forecast[1].low}°/${data.forecast[1].high}°</span>
-                <span class = "forecast-data">${data.forecast[1].condition}</span>
-                <span class = "symbol">${conditions[data.forecast[2].condition]}</span>
-                <span class = "forecast-data">${data.forecast[2].low}°/${data.forecast[2].high}°</span>
-                <span class = "forecast-data">${data.forecast[2].condition}</span></span>`
-                            divupcoming.appendChild(newDivUpcoming);
-                        })
-                } else {
-                    divForecast.style = "display: block";
-                    divCurrent.innerHTML = 'Error';
-                }
             })
-    })
+    }
+
 }
-attachEvents();
